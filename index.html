@@ -246,7 +246,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.3.1';
+  var VERSION = '1.3.2';
   var S = { families: [], people: [], gifts: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
