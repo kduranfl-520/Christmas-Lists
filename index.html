@@ -135,6 +135,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .card .meta { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
 .card .bar { grid-column: 1 / -1; }
 .card .chev { color: var(--muted); }
+.over { color: var(--danger); font-weight: 650; }
 .bar { height: 6px; border-radius: 99px; background: var(--surface2); overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--green); border-radius: 99px; }
 .pills { display: flex; gap: 8px; overflow-x: auto; padding-block: 8px; margin-inline: -16px; padding-inline: 16px; scrollbar-width: none; }
@@ -242,7 +243,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.1.5';
+  var VERSION = '1.2.0';
   var S = { families: [], people: [], gifts: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
@@ -375,6 +376,11 @@ textarea { min-height: 72px; resize: vertical; }
   var gOfF = function (id) { return S.gifts.filter(function (g) { return g.familyId === id; }); };
   var pOfF = function (id) { return S.people.filter(function (p) { return p.familyId === id; }); };
   var readyN = function (gs) { return gs.filter(function (g) { return READY.indexOf(g.status) >= 0; }).length; };
+  var budgetOf = function (p) { return p && +p.budget > 0 ? +p.budget : 0; };
+  var budgetTxt = function (p, spent) {
+    var b = budgetOf(p); if (!b) return '';
+    return spent > b ? '<span class="over">' + money(spent) + ' of ' + money(b) + ' · over by ' + money(spent - b) + '</span>' : money(spent) + ' of ' + money(b) + ' budget';
+  };
   var sumP = function (gs) { return gs.reduce(function (a, g) { return a + (+g.price || 0); }, 0); };
   var matches = function (g, k) { return BYK[k] && BYK[k].flag ? !!g[k] : g.status === k; };
   var countOf = function (gs, k) { return gs.filter(function (g) { return matches(g, k); }).length; };
@@ -437,7 +443,7 @@ textarea { min-height: 72px; resize: vertical; }
     var ps = pOfF(f.id), fg = gOfF(f.id), tot = sumP(fg);
     var list = ps.length ? '<div class="list">' + ps.map(function (p) {
       var g = gOfP(p.id), b = sumP(g);
-      return '<button class="card" data-act="go" data-to="person:' + esc(p.id) + '"><div><b>' + esc(p.name) + '</b><div class="meta">' + plural(g.length, 'gift') + (g.length ? ' · ' + readyN(g) + ' ready' : '') + (b ? ' · ' + money(b) : '') + '</div></div><span class="chev">' + ico('right', 20) + '</span>' + (g.length ? bar(readyN(g), g.length) : '') + '</button>';
+      return '<button class="card" data-act="go" data-to="person:' + esc(p.id) + '"><div><b>' + esc(p.name) + '</b><div class="meta">' + plural(g.length, 'gift') + (g.length ? ' · ' + readyN(g) + ' ready' : '') + (budgetOf(p) ? ' · ' + budgetTxt(p, b) : (b ? ' · ' + money(b) : '')) + '</div></div><span class="chev">' + ico('right', 20) + '</span>' + (g.length ? bar(readyN(g), g.length) : '') + '</button>';
     }).join('') + '</div>'
       : '<div class="empty"><b>No one here yet</b><p>Add each person you are shopping for in this family.</p></div>';
     return '<div class="frozen"><header class="top">' + crumb('Christmas', 'home') + '<div class="titlerow"><div class="fhead">' + famPic(f, true) + '<div><div class="eyebrow">Family</div><h1>' + esc(f.name) + '</h1></div></div><button class="editbtn" data-act="edit-family" data-id="' + esc(f.id) + '">Edit</button></div></header>' +
@@ -456,7 +462,7 @@ textarea { min-height: 72px; resize: vertical; }
     var list = shown.length ? '<div class="list">' + shown.map(function (g) { return giftRow(g, false); }).join('') + '</div>'
       : '<div class="empty"><b>No gift ideas yet</b><p>Tap Add gift to capture the first one. Move it along as you buy, wrap and give it.</p></div>';
     return '<div class="frozen"><header class="top">' + crumb(f ? f.name : 'Back', f ? 'family:' + f.id : 'home') + '<div class="titlerow"><div><div class="eyebrow">' + esc(f ? f.name : 'Person') + '</div><h1>' + esc(p.name) + '</h1></div><button class="editbtn" data-act="edit-person" data-id="' + esc(p.id) + '">Edit</button></div></header>' +
-      (all.length ? '<div class="sum">' + bar(readyN(all), all.length) + '<p>' + plural(all.length, 'gift') + ' · ' + readyN(all) + ' ready' + (tot ? ' · ' + money(tot) : '') + '</p></div>' : '') +
+      (all.length || budgetOf(p) ? '<div class="sum">' + (all.length ? bar(readyN(all), all.length) : '') + '<p>' + plural(all.length, 'gift') + ' · ' + readyN(all) + ' ready' + (budgetOf(p) ? ' · ' + budgetTxt(p, tot) : (tot ? ' · ' + money(tot) : '')) + '</p></div>' : '') +
       '<div class="pills">' + pills + '</div></div>' + list +
       '<button class="fab" data-act="new-gift">+ Add gift</button>';
   }
@@ -513,10 +519,10 @@ textarea { min-height: 72px; resize: vertical; }
     var picker = o.pics ? '<div><div class="lab" style="margin-bottom:6px">Picture</div><div class="picgrid">' + PICKEYS.map(function (k) {
       return '<button type="button" class="pbtn" data-s="pic" data-k="' + k + '" aria-label="' + esc(PICLABEL[k]) + '" aria-pressed="' + (pic === k) + '"><img src="' + PICS[k] + '" alt=""></button>';
     }).join('') + '</div></div>' : '';
-    openSheet('<h2>' + esc(o.title) + '</h2><label class="f"><span>' + esc(o.label) + '</span><input id="nm" value="' + esc(o.value || '') + '" placeholder="' + esc(o.ph) + '" maxlength="60" autocomplete="off"></label>' + picker + '<p class="err" id="err" hidden></p>' +
+    openSheet('<h2>' + esc(o.title) + '</h2><label class="f"><span>' + esc(o.label) + '</span><input id="nm" value="' + esc(o.value || '') + '" placeholder="' + esc(o.ph) + '" maxlength="60" autocomplete="off"></label>' + (o.budget ? '<label class="f"><span>Budget (optional)</span><input id="bd" type="number" inputmode="decimal" min="0" step="any" value="' + esc(o.budgetVal || '') + '" placeholder="100"></label>' : '') + picker + '<p class="err" id="err" hidden></p>' +
       '<div class="acts"><button class="btn pri" data-s="save">Save</button><button class="btn" data-s="cancel">Cancel</button>' + (o.remove ? '<button class="btn dng" data-s="del">' + esc(o.removeLabel) + '</button>' : '') + '</div>', '#nm');
     H = {
-      save: function () { var v = $('#nm').value.trim(); if (!v) return showErr('Enter a name.'); closeSheet(); o.save(v, pic); },
+      save: function () { var v = $('#nm').value.trim(); if (!v) return showErr('Enter a name.'); var bd = $('#bd'), bv = bd ? Math.max(0, parseFloat(bd.value) || 0) : 0; closeSheet(); o.save(v, pic, bv); },
       pic: function (b) { pic = b.dataset.k; sheetEl.querySelectorAll('[data-s="pic"]').forEach(function (x) { x.setAttribute('aria-pressed', String(x.dataset.k === pic)); }); },
       cancel: closeSheet,
       del: function (b) {
@@ -602,7 +608,7 @@ textarea { min-height: 72px; resize: vertical; }
     if (a === 'new-year') return yearSheet();
     if (a === 'backup') return backupSheet();
     if (a === 'new-family') return nameSheet({ title: 'New family', label: 'Family name', ph: 'Mom’s side', pics: true, pic: nextPic(), save: function (n, pic) { put('families', { id: uid(), name: n, icon: pic || null, created: Date.now() }); } });
-    if (a === 'new-person') return nameSheet({ title: 'Add person', label: 'Name', ph: 'Grandma Rose', save: function (n) { put('people', { id: uid(), familyId: v.id, name: n, created: Date.now() }); } });
+    if (a === 'new-person') return nameSheet({ title: 'Add person', label: 'Name', ph: 'Grandma Rose', budget: true, save: function (n, pic, bv) { put('people', { id: uid(), familyId: v.id, name: n, budget: bv || 0, created: Date.now() }); } });
     if (a === 'new-gift') {
       var p = perOf(v.id), st = (S.pf !== 'all' && !BYK[S.pf].flag) ? S.pf : 'ideas';
       return giftSheet({ isNew: true, id: uid(), personId: p.id, familyId: p.familyId, status: st, stocking: S.pf === 'stocking', tomake: S.pf === 'tomake', created: Date.now() }, p.id);
@@ -621,7 +627,7 @@ textarea { min-height: 72px; resize: vertical; }
     }
     if (a === 'edit-person') {
       var pp = perOf(id), n2 = gOfP(id).length;
-      return nameSheet({ title: 'Edit person', label: 'Name', ph: 'Name', value: pp.name, save: function (n) { put('people', Object.assign({}, pp, { name: n })); },
+      return nameSheet({ title: 'Edit person', label: 'Name', ph: 'Name', value: pp.name, budget: true, budgetVal: budgetOf(pp) || '', save: function (n, pic, bv) { put('people', Object.assign({}, pp, { name: n, budget: bv || 0 })); },
         removeLabel: 'Delete person', removeWarn: 'Tap again to delete ' + plural(n2, 'gift'), remove: function () { var fid = pp.familyId; delPerson(id); go('family:' + fid); } });
     }
   });
