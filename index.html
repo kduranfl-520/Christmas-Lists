@@ -136,6 +136,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .card .bar { grid-column: 1 / -1; }
 .card .chev { color: var(--muted); }
 .over { color: var(--danger); font-weight: 650; }
+.left { color: var(--green); font-weight: 700; }
 .bar { height: 6px; border-radius: 99px; background: var(--surface2); overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--green); border-radius: 99px; }
 .pills { display: flex; gap: 8px; overflow-x: auto; padding-block: 8px; margin-inline: -16px; padding-inline: 16px; scrollbar-width: none; }
@@ -243,7 +244,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.2.1';
   var S = { families: [], people: [], gifts: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
@@ -379,7 +380,7 @@ textarea { min-height: 72px; resize: vertical; }
   var budgetOf = function (p) { return p && +p.budget > 0 ? +p.budget : 0; };
   var budgetTxt = function (p, spent) {
     var b = budgetOf(p); if (!b) return '';
-    return spent > b ? '<span class="over">' + money(spent) + ' of ' + money(b) + ' · over by ' + money(spent - b) + '</span>' : money(spent) + ' of ' + money(b) + ' budget';
+    return spent > b ? '<span class="over">' + money(spent) + ' of ' + money(b) + ' · over by ' + money(spent - b) + '</span>' : money(spent) + ' of ' + money(b) + ' · <b class="left">' + money(b - spent) + ' left</b>';
   };
   var sumP = function (gs) { return gs.reduce(function (a, g) { return a + (+g.price || 0); }, 0); };
   var matches = function (g, k) { return BYK[k] && BYK[k].flag ? !!g[k] : g.status === k; };
