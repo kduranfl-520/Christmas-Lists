@@ -241,6 +241,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
+  var VERSION = '1.1.0';
   var S = { families: [], people: [], gifts: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
@@ -255,8 +256,48 @@ textarea { min-height: 72px; resize: vertical; }
   function saveLocal() {
     var snap = { families: S.families, people: S.people, gifts: S.gifts, year: S.year };
     try { localStorage.setItem('cgt-v1', JSON.stringify(snap)); } catch (e) { }
+    autoSnap(snap);
     /* Sync hook: sync.js can define window.CGT_SYNC = { pull: async()=>snap|null, push: async(snap)=>{} } */
     try { if (window.CGT_SYNC && window.CGT_SYNC.push) Promise.resolve(window.CGT_SYNC.push(snap)).catch(fail); } catch (e) { }
+  }
+  /* ---------- backups ---------- */
+  function getSnaps() { try { return JSON.parse(localStorage.getItem('cgt-backups') || '[]'); } catch (e) { return []; } }
+  function autoSnap(snap, force) {
+    if (S.mode !== 'local' || (!snap.gifts.length && !snap.people.length && !snap.families.length)) return;
+    var list = getSnaps(), day = new Date().toISOString().slice(0, 10), last = list[0];
+    if (!force && last && last.day === day) { list[0] = { day: day, at: Date.now(), data: snap }; }
+    else list.unshift({ day: day, at: Date.now(), data: snap });
+    try { localStorage.setItem('cgt-backups', JSON.stringify(list.slice(0, 7))); } catch (e) { }
+  }
+  function snapData() { return { families: S.families, people: S.people, gifts: S.gifts, year: S.year }; }
+  function restoreData(d) {
+    if (!d || !Array.isArray(d.families) || !Array.isArray(d.people) || !Array.isArray(d.gifts)) return false;
+    autoSnap(snapData(), true);
+    if (DB) {
+      ['families', 'people', 'gifts'].forEach(function (c) { d[c].forEach(function (o) { put(c, o); }); });
+      if (d.year) setYear(+d.year);
+    } else {
+      S.families = d.families; S.people = d.people; S.gifts = d.gifts; S.year = d.year || null; saveLocal(); render();
+    }
+    return true;
+  }
+  function backupSheet() {
+    var snaps = getSnaps(), fmt = function (t) { return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
+    var rows = snaps.map(function (b, i) { return '<button class="btn" data-s="snap' + i + '">Restore ' + esc(fmt(b.at)) + ' (' + plural(b.data.gifts.length, 'gift') + ')</button>'; }).join('');
+    openSheet('<h2>Backup</h2><p style="margin:0;color:var(--muted)">Save a copy of everything to a file you can keep in Files, iCloud or email. ' + (S.mode === 'local' ? 'This device also keeps its last ' + plural(snaps.length, 'daily backup') + ' automatically.' : '') + '</p>' +
+      '<div class="acts"><button class="btn pri" data-s="save">Save backup file</button><label class="btn" style="display:grid;place-items:center">Restore from file<input id="rf" type="file" accept=".json,application/json" hidden></label>' + rows + '<button class="btn" data-s="cancel">Close</button></div>');
+    H = { cancel: closeSheet, save: function () {
+      var blob = new Blob([JSON.stringify(Object.assign({ app: 'christmas-list', version: VERSION, saved: new Date().toISOString() }, snapData()), null, 1)], { type: 'application/json' });
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'christmas-list-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000); toast('Backup saved');
+    } };
+    snaps.forEach(function (b, i) { H['snap' + i] = function () { if (restoreData(b.data)) { closeSheet(); toast('Restored backup'); } }; });
+    $('#rf').onchange = function (e) {
+      var f = e.target.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function () { var ok = false; try { ok = restoreData(JSON.parse(r.result)); } catch (x) { } closeSheet(); toast(ok ? 'Backup restored' : 'That file is not a Christmas List backup'); };
+      r.readAsText(f);
+    };
   }
   function fail(e) {
     S.loaded = true; render();
@@ -303,7 +344,7 @@ textarea { min-height: 72px; resize: vertical; }
         } catch (e) { fail(e); }
       });
     } else {
-      S.mode = 'local'; loadLocal(); S.loaded = true; render();
+      S.mode = 'local'; loadLocal(); S.loaded = true; autoSnap(snapData()); render();
       if (window.CGT_SYNC && window.CGT_SYNC.pull) {
         try {
           var r = await window.CGT_SYNC.pull();
@@ -372,8 +413,8 @@ textarea { min-height: 72px; resize: vertical; }
     return '<div class="frozen"><header class="top hero"><img class="lights" src="' + LIGHTS + '" alt=""><div class="htext"><div class="eyebrow">' + esc(when) + '</div><h1>Christmas ' + c.year + '</h1></div></header>' + sum +
       '<h2 class="sec">Filters</h2><div class="fgrid">' + chips + '</div></div>' +
       '<h2 class="sec">Families</h2>' + fams +
-      '<div class="yearrow"><button class="yearbtn" data-act="new-year">Start Christmas ' + (c.year + 1) + '</button></div>' +
-      (S.mode === 'local' ? '<p class="note">Your lists are saved on this device only.</p>' : '') +
+      '<div class="yearrow"><button class="yearbtn" data-act="new-year">Start Christmas ' + (c.year + 1) + '</button><button class="yearbtn" data-act="backup" style="margin-left:8px">Backup</button></div>' +
+      '<p class="note" style="text-align:center">' + (S.mode === 'local' ? 'Your lists are saved on this device only. ' : '') + 'Version ' + VERSION + '</p>' +
       '<button class="fab" data-act="new-family">+ New family</button>';
   }
   function family(f) {
@@ -518,7 +559,7 @@ textarea { min-height: 72px; resize: vertical; }
       cancel: closeSheet,
       go: function (b) {
         if (!armed) { armed = true; b.textContent = 'Tap again to clear ' + plural(n, 'gift'); b.classList.add('armed'); return; }
-        closeSheet();
+        closeSheet(); autoSnap(snapData(), true);
         S.gifts.slice().forEach(function (g) { del('gifts', g.id); });
         setYear(y); S.pf = 'all'; render(); window.scrollTo(0, 0);
         toast('Ready for Christmas ' + y);
@@ -543,6 +584,7 @@ textarea { min-height: 72px; resize: vertical; }
     if (a === 'go') return go(el.dataset.to);
     if (a === 'pf') { S.pf = el.dataset.k; return render(); }
     if (a === 'new-year') return yearSheet();
+    if (a === 'backup') return backupSheet();
     if (a === 'new-family') return nameSheet({ title: 'New family', label: 'Family name', ph: 'Mom’s side', pics: true, pic: nextPic(), save: function (n, pic) { put('families', { id: uid(), name: n, icon: pic || null, created: Date.now() }); } });
     if (a === 'new-person') return nameSheet({ title: 'Add person', label: 'Name', ph: 'Grandma Rose', save: function (n) { put('people', { id: uid(), familyId: v.id, name: n, created: Date.now() }); } });
     if (a === 'new-gift') {
