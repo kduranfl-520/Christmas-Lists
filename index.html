@@ -115,9 +115,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .sum p { color: var(--ink); font-weight: 650; -webkit-text-stroke: 3px color-mix(in srgb, var(--bg) 80%, transparent); paint-order: stroke fill; text-shadow: 0 0 4px color-mix(in srgb, var(--bg) 85%, transparent), 0 0 8px color-mix(in srgb, var(--bg) 60%, transparent); }
 .sum .bar { background: color-mix(in srgb, var(--surface2) 45%, transparent); }
 .hero .lights { position: absolute; top: 0; left: 0; }
-.hero .htext { position: absolute; left: 4px; right: 4px; top: 22px; text-shadow: 0 0 6px var(--bg), 0 0 12px var(--bg), 0 0 18px var(--bg); }
+.hero .htext { position: absolute; left: 4px; right: 4px; top: 12px; text-shadow: 0 0 6px var(--bg), 0 0 12px var(--bg), 0 0 18px var(--bg); }
 .hero .eyebrow { color: var(--ink); margin-bottom: 2px; }
-.hero h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size: 2rem; letter-spacing: 0; }
+.hero h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size: 2.6rem; letter-spacing: 0; }
 .lights { display: block; width: 100%; height: auto; aspect-ratio: 900 / 528; margin-bottom: 0; pointer-events: none; }
 .fhead { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .fhead > div { min-width: 0; }
@@ -241,7 +241,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.1.1';
   var S = { families: [], people: [], gifts: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
