@@ -120,6 +120,9 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .guest .rsvp .rbtn { padding: 0 11px; white-space: nowrap; font-size: 0.9rem; }
 .bring { width: 100%; margin-top: 6px; }
 .guest .titlerow { align-items: center; }
+.bigstep { display: flex; align-items: center; justify-content: center; gap: 22px; min-height: 56px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
+.bigstep button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-size: 1.5rem; line-height: 1; }
+.bigstep b { min-width: 2.5em; text-align: center; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
 .guest .editbtn { min-height: 34px; padding: 4px 14px; }
 .guest .step { margin-left: auto; gap: 2px; }
 .guest .step button { width: 34px; height: 34px; }
@@ -274,7 +277,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.4.9';
+  var VERSION = '1.5.0';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
@@ -673,17 +676,19 @@ textarea { min-height: 72px; resize: vertical; }
       (br ? '<p class="bringing"><b>Bringing:</b> ' + br + '</p>' : '') + '</div>';
   }
   function guestSheet(g) {
-    var armed = false;
+    var armed = false, hc = +g.heads || 1;
     openSheet('<h2>' + (g.isNew ? 'Add guest' : 'Edit guest') + '</h2>' +
       '<label class="f"><span>Name or family</span><input id="gn" value="' + esc(g.name || '') + '" placeholder="The Smiths" maxlength="60" autocomplete="off"></label>' +
-      '<label class="f"><span>Number of people</span><input id="gh" type="number" inputmode="numeric" min="1" max="50" value="' + (+g.heads || 1) + '"></label>' +
+      '<div class="f"><span>Number of people</span><div class="bigstep"><button type="button" data-s="hm" aria-label="One fewer">−</button><b id="ghv">' + (+g.heads || 1) + '</b><button type="button" data-s="hp" aria-label="One more">+</button></div></div>' +
       '<p class="err" id="err" hidden></p>' +
       '<div class="acts"><button class="btn pri" data-s="save">Save</button><button class="btn" data-s="cancel">Cancel</button>' + (g.isNew ? '' : '<button class="btn dng" data-s="del">Remove guest</button>') + '</div>', '#gn');
     H = {
       cancel: closeSheet,
+      hm: function () { hc = Math.max(1, hc - 1); $('#ghv').textContent = hc; },
+      hp: function () { hc = Math.min(50, hc + 1); $('#ghv').textContent = hc; },
       save: function () {
         var n = $('#gn').value.trim(); if (!n) return showErr('Enter a name.');
-        var h = Math.min(50, Math.max(1, parseInt($('#gh').value, 10) || 1)); closeSheet();
+        var h = hc; closeSheet();
         var o = Object.assign({}, g, { name: n, heads: h, rsvp: g.rsvp || 'wait' }); delete o.isNew; put('guests', o);
       },
       del: function (b) {
