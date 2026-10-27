@@ -283,7 +283,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.5.2';
+  var VERSION = '1.5.3';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   try { S.gsort = localStorage.getItem('cgt-gsort') || 'first'; } catch (e) { S.gsort = 'first'; }
@@ -505,7 +505,7 @@ textarea { min-height: 72px; resize: vertical; }
     var c = f.counts || {};
     return '<div class="counts">' + CNT.map(function (k) {
       var n = +c[k[0]] || 0;
-      return '<div class="cnt"><small>' + k[1] + '</small><div><button aria-label="One fewer ' + k[1] + '" data-act="fcount" data-id="' + esc(f.id) + '" data-k="' + k[0] + '" data-d="-1">−</button><b>' + n + '</b><button aria-label="One more ' + k[1] + '" data-act="fcount" data-id="' + esc(f.id) + '" data-k="' + k[0] + '" data-d="1">+</button></div></div>';
+      return '<div class="cnt" title="' + k[1] + '"><small aria-hidden="true">' + k[1].charAt(0) + '</small><div><button aria-label="One fewer ' + k[1] + '" data-act="fcount" data-id="' + esc(f.id) + '" data-k="' + k[0] + '" data-d="-1">−</button><b>' + n + '</b><button aria-label="One more ' + k[1] + '" data-act="fcount" data-id="' + esc(f.id) + '" data-k="' + k[0] + '" data-d="1">+</button></div></div>';
     }).join('') + '</div>';
   }
   function family(f) {
