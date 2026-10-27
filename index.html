@@ -123,6 +123,8 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .bigstep { display: flex; align-items: center; justify-content: center; gap: 22px; min-height: 56px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
 .bigstep button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-size: 1.5rem; line-height: 1; }
 .bigstep b { min-width: 2.5em; text-align: center; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.tally { margin: -4px 0 10px; font-size: 0.92rem; color: var(--ink); position: relative; z-index: 1; font-variant-numeric: tabular-nums; }
+.tally span { color: var(--muted); }
 .counts { display: flex; gap: 6px; margin-top: 14px; position: relative; z-index: 1; }
 .cnt { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 6px 4px 6px; text-align: center; }
 .cnt small { display: block; color: var(--muted); font-weight: 650; font-size: 0.7rem; }
@@ -283,7 +285,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.5.3';
+  var VERSION = '1.5.4';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   try { S.gsort = localStorage.getItem('cgt-gsort') || 'first'; } catch (e) { S.gsort = 'first'; }
@@ -478,6 +480,13 @@ textarea { min-height: 72px; resize: vertical; }
   function loading() {
     return '<header class="top"><h1>Christmas</h1></header><div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   }
+  function countsTally() {
+    var t = { adults: 0, children: 0, friends: 0, pets: 0 };
+    S.families.forEach(function (f) { CNT.forEach(function (k) { t[k[0]] += +(f.counts || {})[k[0]] || 0; }); });
+    var people = t.adults + t.children + t.friends;
+    if (!people && !t.pets) return '';
+    return '<p class="tally"><b>' + people + (people === 1 ? ' person' : ' people') + '</b> · ' + t.adults + (t.adults === 1 ? ' adult' : ' adults') + ' · ' + t.children + (t.children === 1 ? ' child' : ' children') + ' · ' + t.friends + (t.friends === 1 ? ' friend' : ' friends') + '<br><span>' + t.pets + (t.pets === 1 ? ' pet' : ' pets') + ' (not in total)</span></p>';
+  }
   function home() {
     var c = christmas(), gs = S.gifts, r = readyN(gs), tot = sumP(gs);
     var when = c.days === 0 ? 'Christmas Day' : plural(c.days, 'day') + ' to go';
@@ -495,7 +504,7 @@ textarea { min-height: 72px; resize: vertical; }
       : '<div class="empty"><b>Start with a family</b><p>Make one folder for each family, like Mom’s side or the neighbors. Then add the people in it and their gift ideas.</p></div>';
     return '<div class="frozen"><header class="top hero"><img class="lights" src="' + LIGHTS + '" alt=""><div class="htext"><div class="eyebrow">' + esc(when) + '</div><h1>Christmas ' + c.year + '</h1></div><button class="partybtn" data-act="go" data-to="party"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21l4-12 8 8z"/><path d="M13 5v.01M19 8v.01M17 3l-1 2M21 12l-2 .5M12 10c1-2 3-2 4-4"/></svg>Party</button></header>' + sum +
       '<h2 class="sec">Filters</h2><div class="fgrid">' + chips + '</div></div>' +
-      '<h2 class="sec">Families</h2>' + fams +
+      '<h2 class="sec">Families</h2>' + countsTally() + fams +
       '<div class="yearrow"><button class="yearbtn" data-act="new-year">Start Christmas ' + (c.year + 1) + '</button><button class="yearbtn" data-act="backup" style="margin-left:8px">Backup</button></div>' +
       '<p class="note" style="text-align:center">' + (S.mode === 'local' ? 'Your lists are saved on this device only. ' : '') + 'Version ' + VERSION + '</p>' +
       '<button class="fab" data-act="new-family">+ New family</button>';
