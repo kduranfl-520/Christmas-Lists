@@ -272,7 +272,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.4.4';
+  var VERSION = '1.4.5';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
@@ -649,7 +649,7 @@ textarea { min-height: 72px; resize: vertical; }
       wait = gs.filter(function (g) { return isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, unsent = gs.filter(function (g) { return !isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, heads = yes.reduce(function (a, g) { return a + (+g.heads || 1); }, 0);
     var rows = gs.map(function (g) {
       var h = +g.heads || 1, sent = isSent(g), id = esc(g.id);
-      return '<div class="guest"><div class="titlerow"><div><b>' + esc(g.name) + '</b><div class="meta">' + (!sent ? 'Invite not sent' : g.rsvp === 'yes' ? 'Coming' : g.rsvp === 'no' ? 'Not coming' : 'Invite sent · waiting to hear') + '</div></div>' +
+      return '<div class="guest"><div class="titlerow"><div><b>' + esc(g.name) + '</b>' + (g.rsvp === 'yes' || g.rsvp === 'no' ? '' : '<div class="meta">' + (!sent ? 'Invite not sent' : 'Invite sent · waiting to hear') + '</div>') + '</div>' +
         '<button class="editbtn" data-act="edit-guest" data-id="' + id + '">Edit</button></div>' +
         '<input class="bring" data-bring="' + id + '" value="' + esc(g.bring || '') + '" placeholder="Bringing (food, drinks...)" maxlength="80" autocomplete="off" aria-label="What ' + esc(g.name) + ' is bringing">' +
         '<div class="rsvp"><button class="rbtn sent" aria-pressed="' + sent + '" data-act="sent" data-id="' + id + '">' + (sent ? '✓ Invite sent' : 'Mark invite sent') + '</button>' +
