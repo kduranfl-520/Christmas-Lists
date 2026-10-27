@@ -102,6 +102,8 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .guest b { font-family: var(--font-d); font-weight: 600; font-size: 1.1rem; overflow-wrap: anywhere; }
 .rsvp { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .rbtn { min-height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-weight: 650; }
+.rbtn.sent[aria-pressed="true"] { background: color-mix(in srgb, var(--green) 18%, var(--bg)); border-color: var(--green); color: var(--green); }
+.rlab { color: var(--muted); font-size: 0.85rem; font-weight: 650; margin-right: 4px; }
 .rbtn[aria-pressed="true"].yes { background: var(--green); border-color: var(--green); color: #fff; }
 .rbtn[aria-pressed="true"].no { background: var(--danger); border-color: var(--danger); color: #fff; }
 .step { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
@@ -265,7 +267,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.4.1';
+  var VERSION = '1.4.2';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
@@ -636,20 +638,22 @@ textarea { min-height: 72px; resize: vertical; }
 
   /* ---------- party / RSVP ---------- */
   var guestOf = function (id) { return S.guests.find(function (g) { return g.id === id; }); };
+  var isSent = function (g) { return g.sent === undefined ? (g.rsvp === 'yes' || g.rsvp === 'no') : !!g.sent; };
   function party() {
     var gs = S.guests, yes = gs.filter(function (g) { return g.rsvp === 'yes'; }), no = gs.filter(function (g) { return g.rsvp === 'no'; }),
-      wait = gs.length - yes.length - no.length, heads = yes.reduce(function (a, g) { return a + (+g.heads || 1); }, 0);
+      wait = gs.filter(function (g) { return isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, unsent = gs.filter(function (g) { return !isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, heads = yes.reduce(function (a, g) { return a + (+g.heads || 1); }, 0);
     var rows = gs.map(function (g) {
-      var h = +g.heads || 1;
-      return '<div class="guest"><div class="titlerow"><div><b>' + esc(g.name) + '</b><div class="meta">' + (g.rsvp === 'yes' ? 'Coming' : g.rsvp === 'no' ? 'Not coming' : 'Waiting to hear') + '</div></div>' +
-        '<button class="editbtn" data-act="edit-guest" data-id="' + esc(g.id) + '">Edit</button></div>' +
-        '<input class="bring" data-bring="' + esc(g.id) + '" value="' + esc(g.bring || '') + '" placeholder="Bringing (food, drinks...)" maxlength="80" autocomplete="off" aria-label="What ' + esc(g.name) + ' is bringing">' +
-        '<div class="rsvp"><button class="rbtn yes" aria-pressed="' + (g.rsvp === 'yes') + '" data-act="rsvp" data-v="yes" data-id="' + esc(g.id) + '">Yes</button>' +
-        '<button class="rbtn no" aria-pressed="' + (g.rsvp === 'no') + '" data-act="rsvp" data-v="no" data-id="' + esc(g.id) + '">No</button>' +
-        '<span class="step"><button aria-label="One fewer" data-act="heads" data-d="-1" data-id="' + esc(g.id) + '">−</button><span>' + h + '<small>' + (h === 1 ? 'person' : 'people') + '</small></span><button aria-label="One more" data-act="heads" data-d="1" data-id="' + esc(g.id) + '">+</button></span></div></div>';
+      var h = +g.heads || 1, sent = isSent(g), id = esc(g.id);
+      return '<div class="guest"><div class="titlerow"><div><b>' + esc(g.name) + '</b><div class="meta">' + (!sent ? 'Invite not sent' : g.rsvp === 'yes' ? 'Coming' : g.rsvp === 'no' ? 'Not coming' : 'Invite sent · waiting to hear') + '</div></div>' +
+        '<button class="editbtn" data-act="edit-guest" data-id="' + id + '">Edit</button></div>' +
+        '<input class="bring" data-bring="' + id + '" value="' + esc(g.bring || '') + '" placeholder="Bringing (food, drinks...)" maxlength="80" autocomplete="off" aria-label="What ' + esc(g.name) + ' is bringing">' +
+        '<div class="rsvp"><button class="rbtn sent" aria-pressed="' + sent + '" data-act="sent" data-id="' + id + '">' + (sent ? '✓ Invite sent' : 'Mark invite sent') + '</button>' +
+        '<span class="step"><button aria-label="One fewer" data-act="heads" data-d="-1" data-id="' + id + '">−</button><span>' + h + '<small>' + (h === 1 ? 'person' : 'people') + '</small></span><button aria-label="One more" data-act="heads" data-d="1" data-id="' + id + '">+</button></span></div>' +
+        (sent ? '<div class="rsvp"><span class="rlab">RSVP</span><button class="rbtn yes" aria-pressed="' + (g.rsvp === 'yes') + '" data-act="rsvp" data-v="yes" data-id="' + id + '">Yes</button>' +
+          '<button class="rbtn no" aria-pressed="' + (g.rsvp === 'no') + '" data-act="rsvp" data-v="no" data-id="' + id + '">No</button></div>' : '') + '</div>';
     }).join('');
     return '<div class="frozen"><header class="top">' + crumb('Christmas', 'home') + '<div class="titlerow"><div><div class="eyebrow">Party</div><h1>Christmas Party</h1></div></div></header>' +
-      '<div class="sum"><p>' + heads + (heads === 1 ? ' person' : ' people') + ' coming · ' + yes.length + ' yes · ' + no.length + ' no · ' + wait + ' waiting</p></div></div>' +
+      '<div class="sum"><p>' + heads + (heads === 1 ? ' person' : ' people') + ' coming · ' + yes.length + ' yes · ' + no.length + ' no · ' + wait + ' waiting · ' + unsent + ' to invite</p></div></div>' +
       foodSection(gs) + '<h2 class="sec">Guests</h2>' +
       (gs.length ? '<div class="list">' + rows + '</div>' : '<div class="empty"><b>No guests yet</b><p>Add each person or family you invite. Mark Yes or No as they reply and set how many are coming.</p></div>') +
       '<button class="fab" data-act="new-guest">+ Add guest</button>';
@@ -704,6 +708,7 @@ textarea { min-height: 72px; resize: vertical; }
     if (a === 'del-food') { del('food', id); return render(); }
     if (a === 'new-guest') return guestSheet({ isNew: true, id: uid(), rsvp: 'wait', heads: 1, created: Date.now() });
     if (a === 'edit-guest') { var gg = guestOf(id); if (gg) guestSheet(gg); return; }
+    if (a === 'sent') { var g5 = guestOf(id); if (g5) put('guests', Object.assign({}, g5, { sent: !isSent(g5) })); return; }
     if (a === 'rsvp') { var g3 = guestOf(id); if (g3) put('guests', Object.assign({}, g3, { rsvp: g3.rsvp === el.dataset.v ? 'wait' : el.dataset.v })); return; }
     if (a === 'heads') { var g4 = guestOf(id); if (g4) put('guests', Object.assign({}, g4, { heads: Math.min(50, Math.max(1, (+g4.heads || 1) + (+el.dataset.d))) })); return; }
     if (a === 'new-family') return nameSheet({ title: 'New family', label: 'Family name', ph: 'Mom’s side', pics: true, pic: nextPic(), save: function (n, pic) { put('families', { id: uid(), name: n, icon: pic || null, created: Date.now() }); } });
