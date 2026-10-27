@@ -191,7 +191,7 @@ textarea { min-height: 72px; resize: vertical; }
 <div class="wrap" id="app"></div>
 <div id="sheet" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-<img id="santa" src="santa.webp" alt="" width="560" height="485">
+<img id="santa" src="santa.webp" alt="" width="560" height="494">
 <div id="glow" aria-hidden="true"></div>
 
 <script>
@@ -246,7 +246,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.3.3';
+  var VERSION = '1.3.4';
   var S = { families: [], people: [], gifts: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
