@@ -283,9 +283,10 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.5.1';
+  var VERSION = '1.5.2';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
+  try { S.gsort = localStorage.getItem('cgt-gsort') || 'first'; } catch (e) { S.gsort = 'first'; }
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
 
   /* ---------- storage ---------- */
@@ -666,7 +667,9 @@ textarea { min-height: 72px; resize: vertical; }
   function party() {
     var gs = S.guests, yes = gs.filter(function (g) { return g.rsvp === 'yes'; }), no = gs.filter(function (g) { return g.rsvp === 'no'; }),
       wait = gs.filter(function (g) { return isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, unsent = gs.filter(function (g) { return !isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, heads = yes.reduce(function (a, g) { return a + (+g.heads || 1); }, 0);
-    var rows = gs.map(function (g) {
+    var key = function (g) { var w = g.name.trim().toLowerCase().replace(/^the\s+/, '').split(/\s+/); return S.gsort === 'last' ? w[w.length - 1] + ' ' + w.join(' ') : w.join(' '); };
+    var sorted = gs.slice().sort(function (a, b) { return key(a).localeCompare(key(b), undefined, { numeric: true }); });
+    var rows = sorted.map(function (g) {
       var h = +g.heads || 1, sent = isSent(g), id = esc(g.id);
       return '<div class="guest"><div class="titlerow"><div><b>' + esc(g.name) + '</b></div>' +
         '<button class="editbtn" data-act="edit-guest" data-id="' + id + '">Edit</button></div>' +
@@ -678,7 +681,7 @@ textarea { min-height: 72px; resize: vertical; }
     }).join('');
     return '<div class="frozen"><header class="top">' + crumb('Christmas', 'home') + '<div class="titlerow"><div><div class="eyebrow">Party</div><h1>Christmas Party</h1></div></div></header>' +
       '<div class="sum"><p>' + gs.filter(isSent).length + ' of ' + gs.length + ' invites sent</p><p>' + heads + (heads === 1 ? ' person' : ' people') + ' coming · ' + yes.length + ' yes · ' + no.length + ' no · ' + wait + ' waiting</p></div></div>' +
-      foodSection(gs) + '<h2 class="sec">Guests</h2>' +
+      foodSection(gs) + '<h2 class="sec">Guests</h2>' + (gs.length > 1 ? '<div class="pills" style="padding-top:0"><button class="pill" aria-pressed="' + (S.gsort !== 'last') + '" data-act="gsort" data-v="first">A–Z by first name</button><button class="pill" aria-pressed="' + (S.gsort === 'last') + '" data-act="gsort" data-v="last">A–Z by last name</button></div>' : '') +
       (gs.length ? '<div class="list">' + rows + '</div>' : '<div class="empty"><b>No guests yet</b><p>Add each person or family you invite. Mark Yes or No as they reply and set how many are coming.</p></div>') +
       '<button class="fab" data-act="new-guest">+ Add guest</button>';
   }
@@ -733,6 +736,7 @@ textarea { min-height: 72px; resize: vertical; }
     if (a === 'add-food') { var fi = $('#fi'), tx = fi && fi.value.trim(); if (tx) { S.focusFood = true; put('food', { id: uid(), text: tx, created: Date.now() }); } return; }
     if (a === 'del-food') { del('food', id); return render(); }
     if (a === 'fcount') { var ff = famOf(id); if (ff) { var cc = Object.assign({}, ff.counts || {}), kk = el.dataset.k; cc[kk] = Math.min(99, Math.max(0, (+cc[kk] || 0) + (+el.dataset.d))); put('families', Object.assign({}, ff, { counts: cc })); } return; }
+    if (a === 'gsort') { S.gsort = el.dataset.v; try { localStorage.setItem('cgt-gsort', S.gsort); } catch (x) { } return render(); }
     if (a === 'new-guest') return guestSheet({ isNew: true, id: uid(), rsvp: 'wait', heads: 1, created: Date.now() });
     if (a === 'edit-guest') { var gg = guestOf(id); if (gg) guestSheet(gg); return; }
     if (a === 'sent') { var g5 = guestOf(id); if (g5) put('guests', Object.assign({}, g5, { sent: !isSent(g5) })); return; }
