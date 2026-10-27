@@ -97,6 +97,17 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .titlerow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .titlerow > div { min-width: 0; }
 .eyebrow { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.partybtn { position: absolute; top: 2px; right: 0; z-index: 2; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); background: color-mix(in srgb, var(--surface) 55%, transparent); font-weight: 650; font-size: 0.85rem; }
+.guest { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+.guest b { font-family: var(--font-d); font-weight: 600; font-size: 1.1rem; overflow-wrap: anywhere; }
+.rsvp { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.rbtn { min-height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-weight: 650; }
+.rbtn[aria-pressed="true"].yes { background: var(--green); border-color: var(--green); color: #fff; }
+.rbtn[aria-pressed="true"].no { background: var(--danger); border-color: var(--danger); color: #fff; }
+.step { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.step button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); font-size: 1.25rem; line-height: 1; }
+.step span { min-width: 2.6em; text-align: center; font-variant-numeric: tabular-nums; font-weight: 650; }
+.step small { display: block; color: var(--muted); font-weight: 500; font-size: 0.68rem; }
 .editbtn { flex: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 0.9rem; min-height: 40px; }
 .sum { display: flex; flex-direction: column; gap: 8px; margin-block: 8px 4px; }
 .sum p { margin: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -246,8 +257,8 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.3.8';
-  var S = { families: [], people: [], gifts: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
+  var VERSION = '1.4.0';
+  var S = { families: [], people: [], gifts: [], guests: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
 
@@ -255,11 +266,11 @@ textarea { min-height: 72px; resize: vertical; }
   function loadLocal() {
     try {
       var d = JSON.parse(localStorage.getItem('cgt-v1') || '{}');
-      S.families = d.families || []; S.people = d.people || []; S.gifts = d.gifts || []; S.year = d.year || null;
+      S.families = d.families || []; S.people = d.people || []; S.gifts = d.gifts || []; S.guests = d.guests || []; S.year = d.year || null;
     } catch (e) { }
   }
   function saveLocal() {
-    var snap = { families: S.families, people: S.people, gifts: S.gifts, year: S.year };
+    var snap = { families: S.families, people: S.people, gifts: S.gifts, guests: S.guests, year: S.year };
     try { localStorage.setItem('cgt-v1', JSON.stringify(snap)); } catch (e) { }
     autoSnap(snap);
     /* Sync hook: sync.js can define window.CGT_SYNC = { pull: async()=>snap|null, push: async(snap)=>{} } */
@@ -268,21 +279,21 @@ textarea { min-height: 72px; resize: vertical; }
   /* ---------- backups ---------- */
   function getSnaps() { try { return JSON.parse(localStorage.getItem('cgt-backups') || '[]'); } catch (e) { return []; } }
   function autoSnap(snap, force) {
-    if (S.mode !== 'local' || (!snap.gifts.length && !snap.people.length && !snap.families.length)) return;
+    if (S.mode !== 'local' || (!snap.gifts.length && !snap.people.length && !snap.families.length && !(snap.guests || []).length)) return;
     var list = getSnaps(), day = new Date().toISOString().slice(0, 10), last = list[0];
     if (!force && last && last.day === day) { list[0] = { day: day, at: Date.now(), data: snap }; }
     else list.unshift({ day: day, at: Date.now(), data: snap });
     try { localStorage.setItem('cgt-backups', JSON.stringify(list.slice(0, 7))); } catch (e) { }
   }
-  function snapData() { return { families: S.families, people: S.people, gifts: S.gifts, year: S.year }; }
+  function snapData() { return { families: S.families, people: S.people, gifts: S.gifts, guests: S.guests, year: S.year }; }
   function restoreData(d) {
     if (!d || !Array.isArray(d.families) || !Array.isArray(d.people) || !Array.isArray(d.gifts)) return false;
     autoSnap(snapData(), true);
     if (DB) {
-      ['families', 'people', 'gifts'].forEach(function (c) { d[c].forEach(function (o) { put(c, o); }); });
+      ['families', 'people', 'gifts', 'guests'].forEach(function (c) { (d[c] || []).forEach(function (o) { put(c, o); }); });
       if (d.year) setYear(+d.year);
     } else {
-      S.families = d.families; S.people = d.people; S.gifts = d.gifts; S.year = d.year || null; saveLocal(); render();
+      S.families = d.families; S.people = d.people; S.gifts = d.gifts; S.guests = d.guests || []; S.year = d.year || null; saveLocal(); render();
     }
     return true;
   }
@@ -335,7 +346,7 @@ textarea { min-height: 72px; resize: vertical; }
   async function init() {
     try { DB = window.claude ? await window.claude.use('db') : null; } catch (e) { DB = null; }
     if (DB) {
-      ['families', 'people', 'gifts', 'settings'].forEach(function (col) {
+      ['families', 'people', 'gifts', 'guests', 'settings'].forEach(function (col) {
         try {
           DB.collection(col).onSnapshot(function (snap) {
             if (col === 'settings') {
@@ -455,7 +466,7 @@ textarea { min-height: 72px; resize: vertical; }
       return '<button class="card" data-act="go" data-to="family:' + esc(f.id) + '"><div class="fhead">' + famPic(f) + '<div><b>' + esc(f.name) + '</b><div class="meta">' + plural(ps.length, 'person').replace('persons', 'people') + ' · ' + plural(fg.length, 'gift') + (fg.length ? ' · ' + readyN(fg) + ' ready' : '') + '</div></div></div><span class="chev">' + ico('right', 20) + '</span>' + (fg.length ? bar(readyN(fg), fg.length) : '') + '</button>';
     }).join('') + '</div>'
       : '<div class="empty"><b>Start with a family</b><p>Make one folder for each family, like Mom’s side or the neighbors. Then add the people in it and their gift ideas.</p></div>';
-    return '<div class="frozen"><header class="top hero"><img class="lights" src="' + LIGHTS + '" alt=""><div class="htext"><div class="eyebrow">' + esc(when) + '</div><h1>Christmas ' + c.year + '</h1></div></header>' + sum +
+    return '<div class="frozen"><header class="top hero"><img class="lights" src="' + LIGHTS + '" alt=""><div class="htext"><div class="eyebrow">' + esc(when) + '</div><h1>Christmas ' + c.year + '</h1></div><button class="partybtn" data-act="go" data-to="party"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21l4-12 8 8z"/><path d="M13 5v.01M19 8v.01M17 3l-1 2M21 12l-2 .5M12 10c1-2 3-2 4-4"/></svg>Party</button></header>' + sum +
       '<h2 class="sec">Filters</h2><div class="fgrid">' + chips + '</div></div>' +
       '<h2 class="sec">Families</h2>' + fams +
       '<div class="yearrow"><button class="yearbtn" data-act="new-year">Start Christmas ' + (c.year + 1) + '</button><button class="yearbtn" data-act="backup" style="margin-left:8px">Backup</button></div>' +
@@ -509,6 +520,7 @@ textarea { min-height: 72px; resize: vertical; }
     else if (v.n === 'family' && famOf(v.id)) h = family(famOf(v.id));
     else if (v.n === 'person' && perOf(v.id)) h = person(perOf(v.id));
     else if (v.n === 'filter' && BYK[v.id]) h = filterView(v.id);
+    else if (v.n === 'party') h = party();
     else { S.view = { n: 'home' }; h = home(); }
     app.innerHTML = h;
   }
@@ -612,6 +624,46 @@ textarea { min-height: 72px; resize: vertical; }
     };
   }
 
+
+  /* ---------- party / RSVP ---------- */
+  var guestOf = function (id) { return S.guests.find(function (g) { return g.id === id; }); };
+  function party() {
+    var gs = S.guests, yes = gs.filter(function (g) { return g.rsvp === 'yes'; }), no = gs.filter(function (g) { return g.rsvp === 'no'; }),
+      wait = gs.length - yes.length - no.length, heads = yes.reduce(function (a, g) { return a + (+g.heads || 1); }, 0);
+    var rows = gs.map(function (g) {
+      var h = +g.heads || 1;
+      return '<div class="guest"><div class="titlerow"><div><b>' + esc(g.name) + '</b><div class="meta">' + (g.rsvp === 'yes' ? 'Coming' : g.rsvp === 'no' ? 'Not coming' : 'Waiting to hear') + '</div></div>' +
+        '<button class="editbtn" data-act="edit-guest" data-id="' + esc(g.id) + '">Edit</button></div>' +
+        '<div class="rsvp"><button class="rbtn yes" aria-pressed="' + (g.rsvp === 'yes') + '" data-act="rsvp" data-v="yes" data-id="' + esc(g.id) + '">Yes</button>' +
+        '<button class="rbtn no" aria-pressed="' + (g.rsvp === 'no') + '" data-act="rsvp" data-v="no" data-id="' + esc(g.id) + '">No</button>' +
+        '<span class="step"><button aria-label="One fewer" data-act="heads" data-d="-1" data-id="' + esc(g.id) + '">−</button><span>' + h + '<small>' + (h === 1 ? 'person' : 'people') + '</small></span><button aria-label="One more" data-act="heads" data-d="1" data-id="' + esc(g.id) + '">+</button></span></div></div>';
+    }).join('');
+    return '<div class="frozen"><header class="top">' + crumb('Christmas', 'home') + '<div class="titlerow"><div><div class="eyebrow">Party</div><h1>Christmas Party</h1></div></div></header>' +
+      '<div class="sum"><p>' + heads + (heads === 1 ? ' person' : ' people') + ' coming · ' + yes.length + ' yes · ' + no.length + ' no · ' + wait + ' waiting</p></div></div>' +
+      (gs.length ? '<div class="list">' + rows + '</div>' : '<div class="empty"><b>No guests yet</b><p>Add each person or family you invite. Mark Yes or No as they reply and set how many are coming.</p></div>') +
+      '<button class="fab" data-act="new-guest">+ Add guest</button>';
+  }
+  function guestSheet(g) {
+    var armed = false;
+    openSheet('<h2>' + (g.isNew ? 'Add guest' : 'Edit guest') + '</h2>' +
+      '<label class="f"><span>Name or family</span><input id="gn" value="' + esc(g.name || '') + '" placeholder="The Smiths" maxlength="60" autocomplete="off"></label>' +
+      '<label class="f"><span>Number of people</span><input id="gh" type="number" inputmode="numeric" min="1" max="50" value="' + (+g.heads || 1) + '"></label>' +
+      '<p class="err" id="err" hidden></p>' +
+      '<div class="acts"><button class="btn pri" data-s="save">Save</button><button class="btn" data-s="cancel">Cancel</button>' + (g.isNew ? '' : '<button class="btn dng" data-s="del">Remove guest</button>') + '</div>', '#gn');
+    H = {
+      cancel: closeSheet,
+      save: function () {
+        var n = $('#gn').value.trim(); if (!n) return showErr('Enter a name.');
+        var h = Math.min(50, Math.max(1, parseInt($('#gh').value, 10) || 1)); closeSheet();
+        var o = Object.assign({}, g, { name: n, heads: h, rsvp: g.rsvp || 'wait' }); delete o.isNew; put('guests', o);
+      },
+      del: function (b) {
+        if (!armed) { armed = true; b.textContent = 'Tap again to remove'; b.classList.add('armed'); return; }
+        closeSheet(); del('guests', g.id); render();
+      }
+    };
+  }
+
   /* ---------- toast ---------- */
   var tt;
   function toast(msg, undo) {
@@ -630,6 +682,10 @@ textarea { min-height: 72px; resize: vertical; }
     if (a === 'pf') { S.pf = el.dataset.k; return render(); }
     if (a === 'new-year') return yearSheet();
     if (a === 'backup') return backupSheet();
+    if (a === 'new-guest') return guestSheet({ isNew: true, id: uid(), rsvp: 'wait', heads: 1, created: Date.now() });
+    if (a === 'edit-guest') { var gg = guestOf(id); if (gg) guestSheet(gg); return; }
+    if (a === 'rsvp') { var g3 = guestOf(id); if (g3) put('guests', Object.assign({}, g3, { rsvp: g3.rsvp === el.dataset.v ? 'wait' : el.dataset.v })); return; }
+    if (a === 'heads') { var g4 = guestOf(id); if (g4) put('guests', Object.assign({}, g4, { heads: Math.min(50, Math.max(1, (+g4.heads || 1) + (+el.dataset.d))) })); return; }
     if (a === 'new-family') return nameSheet({ title: 'New family', label: 'Family name', ph: 'Mom’s side', pics: true, pic: nextPic(), save: function (n, pic) { put('families', { id: uid(), name: n, icon: pic || null, created: Date.now() }); } });
     if (a === 'new-person') return nameSheet({ title: 'Add person', label: 'Name', ph: 'Grandma Rose', budget: true, save: function (n, pic, bv) { put('people', { id: uid(), familyId: v.id, name: n, budget: bv || 0, created: Date.now() }); } });
     if (a === 'new-gift') {
