@@ -108,6 +108,14 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .step button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); font-size: 1.25rem; line-height: 1; }
 .step span { min-width: 2.6em; text-align: center; font-variant-numeric: tabular-nums; font-weight: 650; }
 .step small { display: block; color: var(--muted); font-weight: 500; font-size: 0.68rem; }
+.food { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; display: grid; gap: 8px; position: relative; z-index: 1; }
+.fitem { display: flex; align-items: center; gap: 8px; }
+.fitem span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.fitem button { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); color: var(--muted); font-size: 1.1rem; line-height: 1; }
+.faddrow { display: flex; gap: 8px; }
+.faddrow input, .bring { flex: 1; min-width: 0; min-height: 42px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); padding: 0 12px; font: inherit; }
+.bring { width: 100%; margin-top: 10px; }
+.bringing { margin: 0; color: var(--muted); font-size: 0.88rem; }
 .editbtn { flex: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 0.9rem; min-height: 40px; }
 .sum { display: flex; flex-direction: column; gap: 8px; margin-block: 8px 4px; }
 .sum p { margin: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -257,8 +265,8 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.4.0';
-  var S = { families: [], people: [], gifts: [], guests: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
+  var VERSION = '1.4.1';
+  var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
 
@@ -266,11 +274,11 @@ textarea { min-height: 72px; resize: vertical; }
   function loadLocal() {
     try {
       var d = JSON.parse(localStorage.getItem('cgt-v1') || '{}');
-      S.families = d.families || []; S.people = d.people || []; S.gifts = d.gifts || []; S.guests = d.guests || []; S.year = d.year || null;
+      S.families = d.families || []; S.people = d.people || []; S.gifts = d.gifts || []; S.guests = d.guests || []; S.food = d.food || []; S.year = d.year || null;
     } catch (e) { }
   }
   function saveLocal() {
-    var snap = { families: S.families, people: S.people, gifts: S.gifts, guests: S.guests, year: S.year };
+    var snap = { families: S.families, people: S.people, gifts: S.gifts, guests: S.guests, food: S.food, year: S.year };
     try { localStorage.setItem('cgt-v1', JSON.stringify(snap)); } catch (e) { }
     autoSnap(snap);
     /* Sync hook: sync.js can define window.CGT_SYNC = { pull: async()=>snap|null, push: async(snap)=>{} } */
@@ -279,21 +287,21 @@ textarea { min-height: 72px; resize: vertical; }
   /* ---------- backups ---------- */
   function getSnaps() { try { return JSON.parse(localStorage.getItem('cgt-backups') || '[]'); } catch (e) { return []; } }
   function autoSnap(snap, force) {
-    if (S.mode !== 'local' || (!snap.gifts.length && !snap.people.length && !snap.families.length && !(snap.guests || []).length)) return;
+    if (S.mode !== 'local' || (!snap.gifts.length && !snap.people.length && !snap.families.length && !(snap.guests || []).length && !(snap.food || []).length)) return;
     var list = getSnaps(), day = new Date().toISOString().slice(0, 10), last = list[0];
     if (!force && last && last.day === day) { list[0] = { day: day, at: Date.now(), data: snap }; }
     else list.unshift({ day: day, at: Date.now(), data: snap });
     try { localStorage.setItem('cgt-backups', JSON.stringify(list.slice(0, 7))); } catch (e) { }
   }
-  function snapData() { return { families: S.families, people: S.people, gifts: S.gifts, guests: S.guests, year: S.year }; }
+  function snapData() { return { families: S.families, people: S.people, gifts: S.gifts, guests: S.guests, food: S.food, year: S.year }; }
   function restoreData(d) {
     if (!d || !Array.isArray(d.families) || !Array.isArray(d.people) || !Array.isArray(d.gifts)) return false;
     autoSnap(snapData(), true);
     if (DB) {
-      ['families', 'people', 'gifts', 'guests'].forEach(function (c) { (d[c] || []).forEach(function (o) { put(c, o); }); });
+      ['families', 'people', 'gifts', 'guests', 'food'].forEach(function (c) { (d[c] || []).forEach(function (o) { put(c, o); }); });
       if (d.year) setYear(+d.year);
     } else {
-      S.families = d.families; S.people = d.people; S.gifts = d.gifts; S.guests = d.guests || []; S.year = d.year || null; saveLocal(); render();
+      S.families = d.families; S.people = d.people; S.gifts = d.gifts; S.guests = d.guests || []; S.food = d.food || []; S.year = d.year || null; saveLocal(); render();
     }
     return true;
   }
@@ -323,12 +331,12 @@ textarea { min-height: 72px; resize: vertical; }
     var k = col + '/' + id;
     chains[k] = (chains[k] || Promise.resolve()).then(fn).catch(fail);
   }
-  function put(col, o) {
+  function put(col, o, quiet) {
     var arr = S[col], i = arr.findIndex(function (x) { return x.id === o.id; });
     if (i < 0) arr.push(o); else arr[i] = o;
     arr.sort(byCreated);
     if (DB) queue(col, o.id, function () { return DB.collection(col).doc(o.id).set(o); }); else saveLocal();
-    render();
+    if (!quiet) render();
   }
   function del(col, id) {
     S[col] = S[col].filter(function (x) { return x.id !== id; });
@@ -346,7 +354,7 @@ textarea { min-height: 72px; resize: vertical; }
   async function init() {
     try { DB = window.claude ? await window.claude.use('db') : null; } catch (e) { DB = null; }
     if (DB) {
-      ['families', 'people', 'gifts', 'guests', 'settings'].forEach(function (col) {
+      ['families', 'people', 'gifts', 'guests', 'food', 'settings'].forEach(function (col) {
         try {
           DB.collection(col).onSnapshot(function (snap) {
             if (col === 'settings') {
@@ -523,6 +531,7 @@ textarea { min-height: 72px; resize: vertical; }
     else if (v.n === 'party') h = party();
     else { S.view = { n: 'home' }; h = home(); }
     app.innerHTML = h;
+    if (S.focusFood) { S.focusFood = false; var fe = $('#fi'); if (fe) fe.focus(); }
   }
   function go(to) {
     var parts = to.split(':');
@@ -634,14 +643,23 @@ textarea { min-height: 72px; resize: vertical; }
       var h = +g.heads || 1;
       return '<div class="guest"><div class="titlerow"><div><b>' + esc(g.name) + '</b><div class="meta">' + (g.rsvp === 'yes' ? 'Coming' : g.rsvp === 'no' ? 'Not coming' : 'Waiting to hear') + '</div></div>' +
         '<button class="editbtn" data-act="edit-guest" data-id="' + esc(g.id) + '">Edit</button></div>' +
+        '<input class="bring" data-bring="' + esc(g.id) + '" value="' + esc(g.bring || '') + '" placeholder="Bringing (food, drinks...)" maxlength="80" autocomplete="off" aria-label="What ' + esc(g.name) + ' is bringing">' +
         '<div class="rsvp"><button class="rbtn yes" aria-pressed="' + (g.rsvp === 'yes') + '" data-act="rsvp" data-v="yes" data-id="' + esc(g.id) + '">Yes</button>' +
         '<button class="rbtn no" aria-pressed="' + (g.rsvp === 'no') + '" data-act="rsvp" data-v="no" data-id="' + esc(g.id) + '">No</button>' +
         '<span class="step"><button aria-label="One fewer" data-act="heads" data-d="-1" data-id="' + esc(g.id) + '">−</button><span>' + h + '<small>' + (h === 1 ? 'person' : 'people') + '</small></span><button aria-label="One more" data-act="heads" data-d="1" data-id="' + esc(g.id) + '">+</button></span></div></div>';
     }).join('');
     return '<div class="frozen"><header class="top">' + crumb('Christmas', 'home') + '<div class="titlerow"><div><div class="eyebrow">Party</div><h1>Christmas Party</h1></div></div></header>' +
       '<div class="sum"><p>' + heads + (heads === 1 ? ' person' : ' people') + ' coming · ' + yes.length + ' yes · ' + no.length + ' no · ' + wait + ' waiting</p></div></div>' +
+      foodSection(gs) + '<h2 class="sec">Guests</h2>' +
       (gs.length ? '<div class="list">' + rows + '</div>' : '<div class="empty"><b>No guests yet</b><p>Add each person or family you invite. Mark Yes or No as they reply and set how many are coming.</p></div>') +
       '<button class="fab" data-act="new-guest">+ Add guest</button>';
+  }
+  function foodSection(gs) {
+    var items = S.food.map(function (f) { return '<div class="fitem"><span>' + esc(f.text) + '</span><button aria-label="Remove ' + esc(f.text) + '" data-act="del-food" data-id="' + esc(f.id) + '">×</button></div>'; }).join('');
+    var br = gs.filter(function (g) { return (g.bring || '').trim(); }).map(function (g) { return esc(g.name) + ': ' + esc(g.bring.trim()); }).join(' · ');
+    return '<h2 class="sec">Food ideas</h2><div class="food">' + (items || '<span class="bringing">No ideas yet. Add dishes, drinks or desserts.</span>') +
+      '<div class="faddrow"><input id="fi" placeholder="Add a food idea" maxlength="80" autocomplete="off"><button class="btn pri" style="min-height:42px" data-act="add-food">Add</button></div>' +
+      (br ? '<p class="bringing"><b>Bringing:</b> ' + br + '</p>' : '') + '</div>';
   }
   function guestSheet(g) {
     var armed = false;
@@ -682,6 +700,8 @@ textarea { min-height: 72px; resize: vertical; }
     if (a === 'pf') { S.pf = el.dataset.k; return render(); }
     if (a === 'new-year') return yearSheet();
     if (a === 'backup') return backupSheet();
+    if (a === 'add-food') { var fi = $('#fi'), tx = fi && fi.value.trim(); if (tx) { S.focusFood = true; put('food', { id: uid(), text: tx, created: Date.now() }); } return; }
+    if (a === 'del-food') { del('food', id); return render(); }
     if (a === 'new-guest') return guestSheet({ isNew: true, id: uid(), rsvp: 'wait', heads: 1, created: Date.now() });
     if (a === 'edit-guest') { var gg = guestOf(id); if (gg) guestSheet(gg); return; }
     if (a === 'rsvp') { var g3 = guestOf(id); if (g3) put('guests', Object.assign({}, g3, { rsvp: g3.rsvp === el.dataset.v ? 'wait' : el.dataset.v })); return; }
@@ -709,6 +729,14 @@ textarea { min-height: 72px; resize: vertical; }
       return nameSheet({ title: 'Edit person', label: 'Name', ph: 'Name', value: pp.name, budget: true, budgetVal: budgetOf(pp) || '', save: function (n, pic, bv) { put('people', Object.assign({}, pp, { name: n, budget: bv || 0 })); },
         removeLabel: 'Delete person', removeWarn: 'Tap again to delete ' + plural(n2, 'gift'), remove: function () { var fid = pp.familyId; delPerson(id); go('family:' + fid); } });
     }
+  });
+
+  app.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.id === 'fi') { e.preventDefault(); var b = app.querySelector('[data-act="add-food"]'); if (b) b.click(); }
+  });
+  app.addEventListener('change', function (e) {
+    var id = e.target.dataset && e.target.dataset.bring; if (!id) return;
+    var g = guestOf(id); if (g) put('guests', Object.assign({}, g, { bring: e.target.value.trim() }), true);
   });
 
   var rootEl = document.documentElement, ticking = false;
