@@ -118,7 +118,9 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .faddrow input, .bring { flex: 1; min-width: 0; min-height: 42px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); padding: 0 12px; font: inherit; }
 .guest .rsvp { gap: 6px; }
 .guest .rsvp .rbtn { padding: 0 11px; white-space: nowrap; font-size: 0.9rem; }
-.bring { width: 100%; margin-top: 10px; }
+.bring { width: 100%; margin-top: 6px; }
+.guest .titlerow { align-items: center; }
+.guest .editbtn { min-height: 34px; padding: 4px 14px; }
 .guest .step { margin-left: auto; gap: 2px; }
 .guest .step button { width: 34px; height: 34px; }
 .guest .step span { min-width: 2.4em; }
@@ -272,7 +274,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.4.5';
+  var VERSION = '1.4.6';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
