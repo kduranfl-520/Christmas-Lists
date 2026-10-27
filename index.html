@@ -120,6 +120,11 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .guest .rsvp .rbtn { padding: 0 11px; white-space: nowrap; font-size: 0.9rem; }
 .bring { width: 100%; margin-top: 6px; }
 .guest .titlerow { align-items: center; }
+.cgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cgrid .bigstep { gap: 6px; min-height: 48px; }
+.cgrid .bigstep button { width: 36px; height: 36px; font-size: 1.2rem; }
+.cgrid .bigstep b { font-size: 1.2rem; min-width: 1.6em; }
+.guest .counts { margin-top: 8px; }
 .bigstep { display: flex; align-items: center; justify-content: center; gap: 22px; min-height: 56px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
 .bigstep button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-size: 1.5rem; line-height: 1; }
 .bigstep b { min-width: 2.5em; text-align: center; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
@@ -285,7 +290,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.5.4';
+  var VERSION = '1.6.0';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   try { S.gsort = localStorage.getItem('cgt-gsort') || 'first'; } catch (e) { S.gsort = 'first'; }
@@ -480,13 +485,6 @@ textarea { min-height: 72px; resize: vertical; }
   function loading() {
     return '<header class="top"><h1>Christmas</h1></header><div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   }
-  function countsTally() {
-    var t = { adults: 0, children: 0, friends: 0, pets: 0 };
-    S.families.forEach(function (f) { CNT.forEach(function (k) { t[k[0]] += +(f.counts || {})[k[0]] || 0; }); });
-    var people = t.adults + t.children + t.friends;
-    if (!people && !t.pets) return '';
-    return '<p class="tally"><b>' + people + (people === 1 ? ' person' : ' people') + '</b> · ' + t.adults + (t.adults === 1 ? ' adult' : ' adults') + ' · ' + t.children + (t.children === 1 ? ' child' : ' children') + ' · ' + t.friends + (t.friends === 1 ? ' friend' : ' friends') + '<br><span>' + t.pets + (t.pets === 1 ? ' pet' : ' pets') + ' (not in total)</span></p>';
-  }
   function home() {
     var c = christmas(), gs = S.gifts, r = readyN(gs), tot = sumP(gs);
     var when = c.days === 0 ? 'Christmas Day' : plural(c.days, 'day') + ' to go';
@@ -504,19 +502,12 @@ textarea { min-height: 72px; resize: vertical; }
       : '<div class="empty"><b>Start with a family</b><p>Make one folder for each family, like Mom’s side or the neighbors. Then add the people in it and their gift ideas.</p></div>';
     return '<div class="frozen"><header class="top hero"><img class="lights" src="' + LIGHTS + '" alt=""><div class="htext"><div class="eyebrow">' + esc(when) + '</div><h1>Christmas ' + c.year + '</h1></div><button class="partybtn" data-act="go" data-to="party"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21l4-12 8 8z"/><path d="M13 5v.01M19 8v.01M17 3l-1 2M21 12l-2 .5M12 10c1-2 3-2 4-4"/></svg>Party</button></header>' + sum +
       '<h2 class="sec">Filters</h2><div class="fgrid">' + chips + '</div></div>' +
-      '<h2 class="sec">Families</h2>' + countsTally() + fams +
+      '<h2 class="sec">Families</h2>' + fams +
       '<div class="yearrow"><button class="yearbtn" data-act="new-year">Start Christmas ' + (c.year + 1) + '</button><button class="yearbtn" data-act="backup" style="margin-left:8px">Backup</button></div>' +
       '<p class="note" style="text-align:center">' + (S.mode === 'local' ? 'Your lists are saved on this device only. ' : '') + 'Version ' + VERSION + '</p>' +
       '<button class="fab" data-act="new-family">+ New family</button>';
   }
   var CNT = [['adults', 'Adults'], ['children', 'Children'], ['friends', 'Friends'], ['pets', 'Pets']];
-  function countsRow(f) {
-    var c = f.counts || {};
-    return '<div class="counts">' + CNT.map(function (k) {
-      var n = +c[k[0]] || 0;
-      return '<div class="cnt" title="' + k[1] + '"><small aria-hidden="true">' + k[1].charAt(0) + '</small><div><button aria-label="One fewer ' + k[1] + '" data-act="fcount" data-id="' + esc(f.id) + '" data-k="' + k[0] + '" data-d="-1">−</button><b>' + n + '</b><button aria-label="One more ' + k[1] + '" data-act="fcount" data-id="' + esc(f.id) + '" data-k="' + k[0] + '" data-d="1">+</button></div></div>';
-    }).join('') + '</div>';
-  }
   function family(f) {
     var ps = pOfF(f.id), fg = gOfF(f.id), tot = sumP(fg);
     var list = ps.length ? '<div class="list">' + ps.map(function (p) {
@@ -526,7 +517,7 @@ textarea { min-height: 72px; resize: vertical; }
       : '<div class="empty"><b>No one here yet</b><p>Add each person you are shopping for in this family.</p></div>';
     return '<div class="frozen"><header class="top">' + crumb('Christmas', 'home') + '<div class="titlerow"><div class="fhead">' + famPic(f, true) + '<div><div class="eyebrow">Family</div><h1>' + esc(f.name) + '</h1></div></div><button class="editbtn" data-act="edit-family" data-id="' + esc(f.id) + '">Edit</button></div></header>' +
       (fg.length ? '<div class="sum">' + bar(readyN(fg), fg.length) + '<p>' + plural(fg.length, 'gift') + ' · ' + readyN(fg) + ' ready' + (tot ? ' · ' + money(tot) : '') + '</p></div>' : '') +
-      '</div>' + countsRow(f) + '<h2 class="sec">People</h2>' + list +
+      '</div><h2 class="sec">People</h2>' + list +
       '<button class="fab" data-act="new-person">+ Add person</button>';
   }
   function person(p) {
@@ -672,24 +663,29 @@ textarea { min-height: 72px; resize: vertical; }
 
   /* ---------- party / RSVP ---------- */
   var guestOf = function (id) { return S.guests.find(function (g) { return g.id === id; }); };
+  var gc = function (g) { var c = g.counts; return c ? { adults: +c.adults || 0, children: +c.children || 0, friends: +c.friends || 0, pets: +c.pets || 0 } : { adults: +g.heads || 1, children: 0, friends: 0, pets: 0 }; };
+  var gPeople = function (g) { var c = gc(g); return c.adults + c.children + c.friends; };
   var isSent = function (g) { return g.sent === undefined ? (g.rsvp === 'yes' || g.rsvp === 'no') : !!g.sent; };
   function party() {
     var gs = S.guests, yes = gs.filter(function (g) { return g.rsvp === 'yes'; }), no = gs.filter(function (g) { return g.rsvp === 'no'; }),
-      wait = gs.filter(function (g) { return isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, unsent = gs.filter(function (g) { return !isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, heads = yes.reduce(function (a, g) { return a + (+g.heads || 1); }, 0);
+      wait = gs.filter(function (g) { return isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, unsent = gs.filter(function (g) { return !isSent(g) && g.rsvp !== 'yes' && g.rsvp !== 'no'; }).length, heads = yes.reduce(function (a, g) { return a + gPeople(g); }, 0),
+      tl = yes.reduce(function (t, g) { var c = gc(g); CNT.forEach(function (k) { t[k[0]] += c[k[0]]; }); return t; }, { adults: 0, children: 0, friends: 0, pets: 0 });
     var key = function (g) { var w = g.name.trim().toLowerCase().replace(/^the\s+/, '').split(/\s+/); return S.gsort === 'last' ? w[w.length - 1] + ' ' + w.join(' ') : w.join(' '); };
     var sorted = gs.slice().sort(function (a, b) { return key(a).localeCompare(key(b), undefined, { numeric: true }); });
     var rows = sorted.map(function (g) {
-      var h = +g.heads || 1, sent = isSent(g), id = esc(g.id);
+      var sent = isSent(g), id = esc(g.id), c = gc(g);
       return '<div class="guest"><div class="titlerow"><div><b>' + esc(g.name) + '</b></div>' +
         '<button class="editbtn" data-act="edit-guest" data-id="' + id + '">Edit</button></div>' +
         '<input class="bring" data-bring="' + id + '" value="' + esc(g.bring || '') + '" placeholder="Bringing (food, drinks...)" maxlength="80" autocomplete="off" aria-label="What ' + esc(g.name) + ' is bringing">' +
         '<div class="rsvp"><button class="rbtn sent" aria-pressed="' + sent + '" data-act="sent" data-id="' + id + '">' + (sent ? '✓ Invite sent' : 'Mark invite sent') + '</button>' +
         (sent ? '<button class="rbtn yes" aria-pressed="' + (g.rsvp === 'yes') + '" data-act="rsvp" data-v="yes" data-id="' + id + '">Yes</button>' +
-          '<button class="rbtn no" aria-pressed="' + (g.rsvp === 'no') + '" data-act="rsvp" data-v="no" data-id="' + id + '">No</button>' : '') +
-        '<span class="step"><button aria-label="One fewer" data-act="heads" data-d="-1" data-id="' + id + '">−</button><span>' + h + '<small>' + (h === 1 ? 'person' : 'people') + '</small></span><button aria-label="One more" data-act="heads" data-d="1" data-id="' + id + '">+</button></span></div></div>';
+          '<button class="rbtn no" aria-pressed="' + (g.rsvp === 'no') + '" data-act="rsvp" data-v="no" data-id="' + id + '">No</button>' : '') + '</div>' +
+        '<div class="counts">' + CNT.map(function (k) {
+          return '<div class="cnt" title="' + k[1] + '"><small aria-hidden="true">' + k[1].charAt(0) + '</small><div><button aria-label="One fewer ' + k[1] + '" data-act="gcount" data-id="' + id + '" data-k="' + k[0] + '" data-d="-1">−</button><b>' + c[k[0]] + '</b><button aria-label="One more ' + k[1] + '" data-act="gcount" data-id="' + id + '" data-k="' + k[0] + '" data-d="1">+</button></div></div>';
+        }).join('') + '</div></div>';
     }).join('');
     return '<div class="frozen"><header class="top">' + crumb('Christmas', 'home') + '<div class="titlerow"><div><div class="eyebrow">Party</div><h1>Christmas Party</h1></div></div></header>' +
-      '<div class="sum"><p>' + gs.filter(isSent).length + ' of ' + gs.length + ' invites sent</p><p>' + heads + (heads === 1 ? ' person' : ' people') + ' coming · ' + yes.length + ' yes · ' + no.length + ' no · ' + wait + ' waiting</p></div></div>' +
+      '<div class="sum"><p>' + gs.filter(isSent).length + ' of ' + gs.length + ' invites sent</p><p>' + heads + (heads === 1 ? ' person' : ' people') + ' coming · ' + yes.length + ' yes · ' + no.length + ' no · ' + wait + ' waiting</p>' + (yes.length ? '<p class="tally">' + tl.adults + (tl.adults === 1 ? ' adult' : ' adults') + ' · ' + tl.children + (tl.children === 1 ? ' child' : ' children') + ' · ' + tl.friends + (tl.friends === 1 ? ' friend' : ' friends') + ' · ' + tl.pets + (tl.pets === 1 ? ' pet' : ' pets') + ' <span>(not in total)</span></p>' : '') + '</div></div>' +
       foodSection(gs) + '<h2 class="sec">Guests</h2>' + (gs.length > 1 ? '<div class="pills" style="padding-top:0"><button class="pill" aria-pressed="' + (S.gsort !== 'last') + '" data-act="gsort" data-v="first">A–Z by first name</button><button class="pill" aria-pressed="' + (S.gsort === 'last') + '" data-act="gsort" data-v="last">A–Z by last name</button></div>' : '') +
       (gs.length ? '<div class="list">' + rows + '</div>' : '<div class="empty"><b>No guests yet</b><p>Add each person or family you invite. Mark Yes or No as they reply and set how many are coming.</p></div>') +
       '<button class="fab" data-act="new-guest">+ Add guest</button>';
@@ -702,20 +698,21 @@ textarea { min-height: 72px; resize: vertical; }
       (br ? '<p class="bringing"><b>Bringing:</b> ' + br + '</p>' : '') + '</div>';
   }
   function guestSheet(g) {
-    var armed = false, hc = +g.heads || 1;
+    var armed = false, cn = gc(g);
     openSheet('<h2>' + (g.isNew ? 'Add guest' : 'Edit guest') + '</h2>' +
       '<label class="f"><span>Name or family</span><input id="gn" value="' + esc(g.name || '') + '" placeholder="The Smiths" maxlength="60" autocomplete="off"></label>' +
-      '<div class="f"><span>Number of people</span><div class="bigstep"><button type="button" data-s="hm" aria-label="One fewer">−</button><b id="ghv">' + (+g.heads || 1) + '</b><button type="button" data-s="hp" aria-label="One more">+</button></div></div>' +
+      '<div class="f"><span>Who is in this party (pets are not in the total)</span><div class="cgrid">' + CNT.map(function (k) {
+        return '<div class="f"><span>' + k[1] + '</span><div class="bigstep"><button type="button" data-s="cs" data-k="' + k[0] + '" data-d="-1" aria-label="One fewer ' + k[1] + '">−</button><b id="gc_' + k[0] + '">' + cn[k[0]] + '</b><button type="button" data-s="cs" data-k="' + k[0] + '" data-d="1" aria-label="One more ' + k[1] + '">+</button></div></div>';
+      }).join('') + '</div></div>' +
       '<p class="err" id="err" hidden></p>' +
       '<div class="acts"><button class="btn pri" data-s="save">Save</button><button class="btn" data-s="cancel">Cancel</button>' + (g.isNew ? '' : '<button class="btn dng" data-s="del">Remove guest</button>') + '</div>', '#gn');
     H = {
       cancel: closeSheet,
-      hm: function () { hc = Math.max(1, hc - 1); $('#ghv').textContent = hc; },
-      hp: function () { hc = Math.min(50, hc + 1); $('#ghv').textContent = hc; },
+      cs: function (b) { var k = b.dataset.k; cn[k] = Math.min(99, Math.max(0, cn[k] + (+b.dataset.d))); $('#gc_' + k).textContent = cn[k]; },
       save: function () {
         var n = $('#gn').value.trim(); if (!n) return showErr('Enter a name.');
-        var h = hc; closeSheet();
-        var o = Object.assign({}, g, { name: n, heads: h, rsvp: g.rsvp || 'wait' }); delete o.isNew; put('guests', o);
+        closeSheet();
+        var o = Object.assign({}, g, { name: n, counts: cn, heads: cn.adults + cn.children + cn.friends, rsvp: g.rsvp || 'wait' }); delete o.isNew; put('guests', o);
       },
       del: function (b) {
         if (!armed) { armed = true; b.textContent = 'Tap again to remove'; b.classList.add('armed'); return; }
@@ -744,13 +741,12 @@ textarea { min-height: 72px; resize: vertical; }
     if (a === 'backup') return backupSheet();
     if (a === 'add-food') { var fi = $('#fi'), tx = fi && fi.value.trim(); if (tx) { S.focusFood = true; put('food', { id: uid(), text: tx, created: Date.now() }); } return; }
     if (a === 'del-food') { del('food', id); return render(); }
-    if (a === 'fcount') { var ff = famOf(id); if (ff) { var cc = Object.assign({}, ff.counts || {}), kk = el.dataset.k; cc[kk] = Math.min(99, Math.max(0, (+cc[kk] || 0) + (+el.dataset.d))); put('families', Object.assign({}, ff, { counts: cc })); } return; }
     if (a === 'gsort') { S.gsort = el.dataset.v; try { localStorage.setItem('cgt-gsort', S.gsort); } catch (x) { } return render(); }
-    if (a === 'new-guest') return guestSheet({ isNew: true, id: uid(), rsvp: 'wait', heads: 1, created: Date.now() });
+    if (a === 'new-guest') return guestSheet({ isNew: true, id: uid(), rsvp: 'wait', counts: { adults: 1, children: 0, friends: 0, pets: 0 }, heads: 1, created: Date.now() });
     if (a === 'edit-guest') { var gg = guestOf(id); if (gg) guestSheet(gg); return; }
     if (a === 'sent') { var g5 = guestOf(id); if (g5) put('guests', Object.assign({}, g5, { sent: !isSent(g5) })); return; }
     if (a === 'rsvp') { var g3 = guestOf(id); if (g3) put('guests', Object.assign({}, g3, { rsvp: g3.rsvp === el.dataset.v ? 'wait' : el.dataset.v })); return; }
-    if (a === 'heads') { var g4 = guestOf(id); if (g4) put('guests', Object.assign({}, g4, { heads: Math.min(50, Math.max(1, (+g4.heads || 1) + (+el.dataset.d))) })); return; }
+    if (a === 'gcount') { var g4 = guestOf(id); if (g4) { var cc = gc(g4), kk = el.dataset.k; cc[kk] = Math.min(99, Math.max(0, cc[kk] + (+el.dataset.d))); put('guests', Object.assign({}, g4, { counts: cc, heads: cc.adults + cc.children + cc.friends })); } return; }
     if (a === 'new-family') return nameSheet({ title: 'New family', label: 'Family name', ph: 'Mom’s side', pics: true, pic: nextPic(), save: function (n, pic) { put('families', { id: uid(), name: n, icon: pic || null, created: Date.now() }); } });
     if (a === 'new-person') return nameSheet({ title: 'Add person', label: 'Name', ph: 'Grandma Rose', budget: true, save: function (n, pic, bv) { put('people', { id: uid(), familyId: v.id, name: n, budget: bv || 0, created: Date.now() }); } });
     if (a === 'new-gift') {
