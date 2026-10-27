@@ -123,6 +123,12 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .bigstep { display: flex; align-items: center; justify-content: center; gap: 22px; min-height: 56px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
 .bigstep button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-size: 1.5rem; line-height: 1; }
 .bigstep b { min-width: 2.5em; text-align: center; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.counts { display: flex; gap: 6px; margin-top: 14px; position: relative; z-index: 1; }
+.cnt { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 6px 4px 6px; text-align: center; }
+.cnt small { display: block; color: var(--muted); font-weight: 650; font-size: 0.7rem; }
+.cnt div { display: flex; align-items: center; justify-content: center; gap: 2px; margin-top: 2px; }
+.cnt button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); font-size: 1rem; line-height: 1; padding: 0; }
+.cnt b { min-width: 1.4em; font-variant-numeric: tabular-nums; font-size: 1rem; }
 .guest .editbtn { min-height: 34px; padding: 4px 14px; }
 .guest .step { margin-left: auto; gap: 2px; }
 .guest .step button { width: 34px; height: 34px; }
@@ -277,7 +283,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.5.0';
+  var VERSION = '1.5.1';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   var byCreated = function (a, b) { return (a.created || 0) - (b.created || 0); };
@@ -493,6 +499,14 @@ textarea { min-height: 72px; resize: vertical; }
       '<p class="note" style="text-align:center">' + (S.mode === 'local' ? 'Your lists are saved on this device only. ' : '') + 'Version ' + VERSION + '</p>' +
       '<button class="fab" data-act="new-family">+ New family</button>';
   }
+  var CNT = [['adults', 'Adults'], ['children', 'Children'], ['friends', 'Friends'], ['pets', 'Pets']];
+  function countsRow(f) {
+    var c = f.counts || {};
+    return '<div class="counts">' + CNT.map(function (k) {
+      var n = +c[k[0]] || 0;
+      return '<div class="cnt"><small>' + k[1] + '</small><div><button aria-label="One fewer ' + k[1] + '" data-act="fcount" data-id="' + esc(f.id) + '" data-k="' + k[0] + '" data-d="-1">−</button><b>' + n + '</b><button aria-label="One more ' + k[1] + '" data-act="fcount" data-id="' + esc(f.id) + '" data-k="' + k[0] + '" data-d="1">+</button></div></div>';
+    }).join('') + '</div>';
+  }
   function family(f) {
     var ps = pOfF(f.id), fg = gOfF(f.id), tot = sumP(fg);
     var list = ps.length ? '<div class="list">' + ps.map(function (p) {
@@ -502,7 +516,7 @@ textarea { min-height: 72px; resize: vertical; }
       : '<div class="empty"><b>No one here yet</b><p>Add each person you are shopping for in this family.</p></div>';
     return '<div class="frozen"><header class="top">' + crumb('Christmas', 'home') + '<div class="titlerow"><div class="fhead">' + famPic(f, true) + '<div><div class="eyebrow">Family</div><h1>' + esc(f.name) + '</h1></div></div><button class="editbtn" data-act="edit-family" data-id="' + esc(f.id) + '">Edit</button></div></header>' +
       (fg.length ? '<div class="sum">' + bar(readyN(fg), fg.length) + '<p>' + plural(fg.length, 'gift') + ' · ' + readyN(fg) + ' ready' + (tot ? ' · ' + money(tot) : '') + '</p></div>' : '') +
-      '</div><h2 class="sec">People</h2>' + list +
+      '</div>' + countsRow(f) + '<h2 class="sec">People</h2>' + list +
       '<button class="fab" data-act="new-person">+ Add person</button>';
   }
   function person(p) {
@@ -718,6 +732,7 @@ textarea { min-height: 72px; resize: vertical; }
     if (a === 'backup') return backupSheet();
     if (a === 'add-food') { var fi = $('#fi'), tx = fi && fi.value.trim(); if (tx) { S.focusFood = true; put('food', { id: uid(), text: tx, created: Date.now() }); } return; }
     if (a === 'del-food') { del('food', id); return render(); }
+    if (a === 'fcount') { var ff = famOf(id); if (ff) { var cc = Object.assign({}, ff.counts || {}), kk = el.dataset.k; cc[kk] = Math.min(99, Math.max(0, (+cc[kk] || 0) + (+el.dataset.d))); put('families', Object.assign({}, ff, { counts: cc })); } return; }
     if (a === 'new-guest') return guestSheet({ isNew: true, id: uid(), rsvp: 'wait', heads: 1, created: Date.now() });
     if (a === 'edit-guest') { var gg = guestOf(id); if (gg) guestSheet(gg); return; }
     if (a === 'sent') { var g5 = guestOf(id); if (g5) put('guests', Object.assign({}, g5, { sent: !isSent(g5) })); return; }
