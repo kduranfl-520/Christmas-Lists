@@ -290,7 +290,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.6.0';
+  var VERSION = '1.6.1';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   try { S.gsort = localStorage.getItem('cgt-gsort') || 'first'; } catch (e) { S.gsort = 'first'; }
@@ -690,12 +690,20 @@ textarea { min-height: 72px; resize: vertical; }
       (gs.length ? '<div class="list">' + rows + '</div>' : '<div class="empty"><b>No guests yet</b><p>Add each person or family you invite. Mark Yes or No as they reply and set how many are coming.</p></div>') +
       '<button class="fab" data-act="new-guest">+ Add guest</button>';
   }
+  function bringLine(gs) {
+    var br = gs.filter(function (g) { return (g.bring || '').trim(); }).map(function (g) { return esc(g.name) + ': ' + esc(g.bring.trim()); }).join(' · ');
+    return br ? '<p class="bringing" id="bringline"><b>Bringing:</b> ' + br + '</p>' : '';
+  }
+  function refreshBring() {
+    var box = app.querySelector('.food'); if (!box) return;
+    var old = $('#bringline'); if (old) old.remove();
+    box.insertAdjacentHTML('beforeend', bringLine(S.guests));
+  }
   function foodSection(gs) {
     var items = S.food.map(function (f) { return '<div class="fitem"><span>' + esc(f.text) + '</span><button aria-label="Remove ' + esc(f.text) + '" data-act="del-food" data-id="' + esc(f.id) + '">×</button></div>'; }).join('');
-    var br = gs.filter(function (g) { return (g.bring || '').trim(); }).map(function (g) { return esc(g.name) + ': ' + esc(g.bring.trim()); }).join(' · ');
     return '<h2 class="sec">Food ideas</h2><div class="food">' + (items || '<span class="bringing">No ideas yet. Add dishes, drinks or desserts.</span>') +
       '<div class="faddrow"><input id="fi" placeholder="Add a food idea" maxlength="80" autocomplete="off"><button class="btn pri" style="min-height:42px" data-act="add-food">Add</button></div>' +
-      (br ? '<p class="bringing"><b>Bringing:</b> ' + br + '</p>' : '') + '</div>';
+      bringLine(gs) + '</div>';
   }
   function guestSheet(g) {
     var armed = false, cn = gc(g);
@@ -777,7 +785,7 @@ textarea { min-height: 72px; resize: vertical; }
   });
   app.addEventListener('change', function (e) {
     var id = e.target.dataset && e.target.dataset.bring; if (!id) return;
-    var g = guestOf(id); if (g) put('guests', Object.assign({}, g, { bring: e.target.value.trim() }), true);
+    var g = guestOf(id); if (g) { put('guests', Object.assign({}, g, { bring: e.target.value.trim() }), true); refreshBring(); }
   });
 
   var rootEl = document.documentElement, ticking = false;
