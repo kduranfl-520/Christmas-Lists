@@ -294,7 +294,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.6.3';
+  var VERSION = '1.6.4';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   try { S.gsort = localStorage.getItem('cgt-gsort') || 'first'; } catch (e) { S.gsort = 'first'; }
@@ -689,7 +689,7 @@ textarea { min-height: 72px; resize: vertical; }
         }).join('') + '</div></div>';
     }).join('');
     return '<div class="frozen"><header class="top">' + crumb('Christmas', 'home') + '<div class="titlerow"><div><div class="eyebrow">Party</div><h1>Christmas Party</h1></div></div></header>' +
-      '<div class="sum"><p>' + gs.filter(isSent).length + ' of ' + gs.length + ' invites sent</p><p>' + heads + (heads === 1 ? ' person' : ' people') + ' coming · ' + yes.length + ' yes · ' + no.length + ' no · ' + wait + ' waiting</p>' + (yes.length ? '<p class="tally">' + tl.adults + (tl.adults === 1 ? ' adult' : ' adults') + ' · ' + tl.children + (tl.children === 1 ? ' child' : ' children') + ' · ' + tl.friends + (tl.friends === 1 ? ' friend' : ' friends') + ' · ' + tl.pets + (tl.pets === 1 ? ' pet' : ' pets') + ' <span>(not in total)</span></p>' : '') + '</div></div>' +
+      '<div class="sum"><p>' + gs.filter(isSent).length + ' of ' + gs.length + ' invites sent · ' + gs.reduce(function (a, g) { return a + gPeople(g); }, 0) + ' people invited</p><p>' + heads + (heads === 1 ? ' person' : ' people') + ' coming · ' + yes.length + ' yes · ' + no.length + ' no · ' + wait + ' waiting</p>' + (yes.length ? '<p class="tally">' + tl.adults + (tl.adults === 1 ? ' adult' : ' adults') + ' · ' + tl.children + (tl.children === 1 ? ' child' : ' children') + ' · ' + tl.friends + (tl.friends === 1 ? ' friend' : ' friends') + ' · ' + tl.pets + (tl.pets === 1 ? ' pet' : ' pets') + ' <span>(not in total)</span></p>' : '') + '</div></div>' +
       foodSection(gs) + '<h2 class="sec">Guests</h2>' + (gs.length > 1 ? '<div class="pills" style="padding-top:0"><button class="pill" aria-pressed="' + (S.gsort !== 'last') + '" data-act="gsort" data-v="first">A–Z by first name</button><button class="pill" aria-pressed="' + (S.gsort === 'last') + '" data-act="gsort" data-v="last">A–Z by last name</button></div>' : '') +
       (gs.length ? '<div class="list">' + rows + '</div>' : '<div class="empty"><b>No guests yet</b><p>Add each person or family you invite. Mark Yes or No as they reply and set how many are coming.</p></div>') +
       '<button class="fab" data-act="new-guest">+ Add guest</button>';
