@@ -141,6 +141,9 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .guest .step { margin-left: auto; gap: 2px; }
 .guest .step button { width: 34px; height: 34px; }
 .guest .step span { min-width: 2.4em; }
+.bringing ul { margin: 4px 0 0; padding-left: 20px; }
+.bringing li { margin: 2px 0; color: var(--ink); }
+.bringing u { text-underline-offset: 2px; }
 .bringing { margin: 0; color: var(--muted); font-size: 0.88rem; }
 .editbtn { flex: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 0.9rem; min-height: 40px; }
 .sum { display: flex; flex-direction: column; gap: 8px; margin-block: 8px 4px; }
@@ -291,7 +294,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.6.2';
+  var VERSION = '1.6.3';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   try { S.gsort = localStorage.getItem('cgt-gsort') || 'first'; } catch (e) { S.gsort = 'first'; }
@@ -692,8 +695,8 @@ textarea { min-height: 72px; resize: vertical; }
       '<button class="fab" data-act="new-guest">+ Add guest</button>';
   }
   function bringLine(gs) {
-    var br = gs.filter(function (g) { return (g.bring || '').trim(); }).map(function (g) { return esc(g.name) + ': ' + esc(g.bring.trim()); }).join(' · ');
-    return br ? '<p class="bringing" id="bringline"><b>Bringing:</b> ' + br + '</p>' : '';
+    var li = gs.filter(function (g) { return (g.bring || '').trim(); }).map(function (g) { return '<li>' + esc(g.name) + ': <u>' + esc(g.bring.trim()) + '</u></li>'; }).join('');
+    return li ? '<div class="bringing" id="bringline"><b>Bringing</b><ul>' + li + '</ul></div>' : '';
   }
   function refreshBring() {
     var box = app.querySelector('.food'); if (!box) return;
