@@ -112,7 +112,8 @@ h1 { font-family: 'Berkshire Swash', var(--font-d); font-weight: 400; font-size:
 .step small { display: block; color: var(--muted); font-weight: 500; font-size: 0.68rem; }
 .food { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; display: grid; gap: 8px; position: relative; z-index: 1; }
 .fitem { display: flex; align-items: center; gap: 8px; }
-.fitem span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.fedit { flex: 1; min-width: 0; min-height: 40px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--ink); padding: 0 8px; margin-left: -8px; font: inherit; }
+.fedit:focus { border-color: var(--line); background: var(--bg); outline: none; }
 .fitem button { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); color: var(--muted); font-size: 1.1rem; line-height: 1; }
 .faddrow { display: flex; gap: 8px; }
 .faddrow input, .bring { flex: 1; min-width: 0; min-height: 42px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); padding: 0 12px; font: inherit; }
@@ -290,7 +291,7 @@ textarea { min-height: 72px; resize: vertical; }
   var money = function (n) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 ? 2 : 0 }).format(n); };
   var plural = function (n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); };
 
-  var VERSION = '1.6.1';
+  var VERSION = '1.6.2';
   var S = { families: [], people: [], gifts: [], guests: [], food: [], year: null, loaded: false, mode: 'db', view: { n: 'home' }, pf: 'all' };
   var DB = null, got = {}, chains = {};
   try { S.gsort = localStorage.getItem('cgt-gsort') || 'first'; } catch (e) { S.gsort = 'first'; }
@@ -700,7 +701,7 @@ textarea { min-height: 72px; resize: vertical; }
     box.insertAdjacentHTML('beforeend', bringLine(S.guests));
   }
   function foodSection(gs) {
-    var items = S.food.map(function (f) { return '<div class="fitem"><span>' + esc(f.text) + '</span><button aria-label="Remove ' + esc(f.text) + '" data-act="del-food" data-id="' + esc(f.id) + '">×</button></div>'; }).join('');
+    var items = S.food.map(function (f) { return '<div class="fitem"><input class="fedit" data-food="' + esc(f.id) + '" value="' + esc(f.text) + '" maxlength="80" autocomplete="off" aria-label="Food idea"><button aria-label="Remove ' + esc(f.text) + '" data-act="del-food" data-id="' + esc(f.id) + '">×</button></div>'; }).join('');
     return '<h2 class="sec">Food ideas</h2><div class="food">' + (items || '<span class="bringing">No ideas yet. Add dishes, drinks or desserts.</span>') +
       '<div class="faddrow"><input id="fi" placeholder="Add a food idea" maxlength="80" autocomplete="off"><button class="btn pri" style="min-height:42px" data-act="add-food">Add</button></div>' +
       bringLine(gs) + '</div>';
@@ -784,6 +785,13 @@ textarea { min-height: 72px; resize: vertical; }
     if (e.key === 'Enter' && e.target.id === 'fi') { e.preventDefault(); var b = app.querySelector('[data-act="add-food"]'); if (b) b.click(); }
   });
   app.addEventListener('change', function (e) {
+    var fid = e.target.dataset && e.target.dataset.food;
+    if (fid) {
+      var f = S.food.find(function (x) { return x.id === fid; }), v = e.target.value.trim();
+      if (!f) return;
+      if (!v) { e.target.value = f.text; return; }
+      put('food', Object.assign({}, f, { text: v }), true); return;
+    }
     var id = e.target.dataset && e.target.dataset.bring; if (!id) return;
     var g = guestOf(id); if (g) { put('guests', Object.assign({}, g, { bring: e.target.value.trim() }), true); refreshBring(); }
   });
